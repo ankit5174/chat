@@ -107,6 +107,12 @@
 
         .icon-btn:active { background: var(--surface-elevated); }
 
+        .icon-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            color: #93c5fd;
+        }
+
         .icon-btn svg {
             width: 18px;
             height: 18px;
@@ -134,12 +140,22 @@
         .status-dot.connected { background: var(--success); }
         .status-dot.error { background: var(--error); }
 
+        .dev-tools-panel {
+            display: none;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.35);
+        }
+
+        .dev-tools-panel.visible {
+            display: block;
+        }
+
         .actions-bar {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
-            padding: 10px 16px;
-            border-bottom: 1px solid var(--border);
+            padding: 10px 16px 8px;
             flex-shrink: 0;
         }
 
@@ -163,15 +179,11 @@
 
         .chat-config-panel {
             flex-shrink: 0;
-            margin: 0 12px 8px;
+            margin: 0 12px 12px;
             padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 10px;
             background: rgba(15, 23, 42, 0.65);
-            display: none;
-        }
-
-        .chat-config-panel.visible {
             display: block;
         }
 
@@ -572,6 +584,11 @@
                     <p>Bridge demo · request · event</p>
                 </div>
                 <div class="header-toolbar">
+                    <button class="icon-btn" type="button" id="dev-tools-btn" aria-label="Developer tools" title="Developer tools" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                        </svg>
+                    </button>
                     <button class="icon-btn" type="button" id="clear-chat-btn" aria-label="Clear chat" title="Clear chat">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
@@ -595,32 +612,34 @@
             </div>
         </header>
 
-        <div class="actions-bar" id="actions-bar">
-            <button class="action-chip" type="button" data-demo="chat-ready">CHAT_READY</button>
-            <button class="action-chip" type="button" data-demo="open-url-in-app">OPEN_URL (IN APP)</button>
-            <button class="action-chip" type="button" data-demo="open-url-external">OPEN_URL (EXTERNAL)</button>
-            <button class="action-chip" type="button" data-demo="intent-route-transfers">INTENT_TRANSFERS</button>
-            <button class="action-chip" type="button" data-demo="intent-route-transaction-history">INTENT_TXN_HISTORY</button>
-            <button class="action-chip" type="button" data-demo="show-greeting">SHOW_GREETING</button>
-            <button class="action-chip" type="button" data-demo="hide-greeting">HIDE_GREETING</button>
-            <button class="action-chip" type="button" data-demo="log-chat-config">LOG_CONFIG</button>
-        </div>
-
-        <section class="chat-config-panel" id="chat-config-panel" aria-live="polite">
-            <div class="chat-config-header">
-                <div class="chat-config-title">Chat config</div>
-                <div class="chat-config-actions">
-                    <button class="config-btn" type="button" id="log-config-btn">Log</button>
-                    <button class="config-btn" type="button" id="copy-config-btn">Copy</button>
-                </div>
+        <div class="dev-tools-panel" id="dev-tools-panel" aria-hidden="true">
+            <div class="actions-bar" id="actions-bar">
+                <button class="action-chip" type="button" data-demo="chat-ready">CHAT_READY</button>
+                <button class="action-chip" type="button" data-demo="open-url-in-app">OPEN_URL (IN APP)</button>
+                <button class="action-chip" type="button" data-demo="open-url-external">OPEN_URL (EXTERNAL)</button>
+                <button class="action-chip" type="button" data-demo="intent-route-transfers">INTENT_TRANSFERS</button>
+                <button class="action-chip" type="button" data-demo="intent-route-transaction-history">INTENT_TXN_HISTORY</button>
+                <button class="action-chip" type="button" data-demo="show-greeting">SHOW_GREETING</button>
+                <button class="action-chip" type="button" data-demo="hide-greeting">HIDE_GREETING</button>
+                <button class="action-chip" type="button" data-demo="log-chat-config">LOG_CONFIG</button>
             </div>
-            <textarea class="chat-config-text" id="chat-config-text" readonly spellcheck="false" aria-label="Chat config JSON">{}</textarea>
-        </section>
+
+            <section class="chat-config-panel" id="chat-config-panel" aria-live="polite">
+                <div class="chat-config-header">
+                    <div class="chat-config-title">Chat config</div>
+                    <div class="chat-config-actions">
+                        <button class="config-btn" type="button" id="log-config-btn">Log</button>
+                        <button class="config-btn" type="button" id="copy-config-btn">Copy</button>
+                    </div>
+                </div>
+                <textarea class="chat-config-text" id="chat-config-text" readonly spellcheck="false" aria-label="Chat config JSON">{}</textarea>
+            </section>
+        </div>
 
         <div class="chat-body">
             <div class="messages" id="messages">
                 <div class="message bot">
-                    <div class="bubble">Hi! I'm your banking assistant demo. Send a message or tap an action chip above to try the native bridge.</div>
+                    <div class="bubble">Hi! I'm your banking assistant demo. Send a message or open developer tools from the header to try bridge quick actions.</div>
                     <span class="meta" id="welcome-meta"></span>
                 </div>
             </div>
@@ -661,17 +680,20 @@
             var statusLabel = document.getElementById('status-label');
             var composerForm = document.getElementById('composer-form');
             var actionsBar = document.getElementById('actions-bar');
+            var devToolsPanel = document.getElementById('dev-tools-panel');
+            var devToolsBtn = document.getElementById('dev-tools-btn');
             var clearChatBtn = document.getElementById('clear-chat-btn');
             var closeChatBtn = document.getElementById('close-chat-btn');
             var welcomeMeta = document.getElementById('welcome-meta');
             var chatConfigPanel = document.getElementById('chat-config-panel');
+            var devToolsOpen = false;
             var chatConfigText = document.getElementById('chat-config-text');
             var logConfigBtn = document.getElementById('log-config-btn');
             var copyConfigBtn = document.getElementById('copy-config-btn');
 
             var botReplies = [
                 'I can help with transfers, balances, and account questions.',
-                'Try the action chips above to test native bridge requests and events.',
+                'Open developer tools in the header to test native bridge quick actions.',
                 'OPEN_URL supports in-app and external browser modes.',
                 'Use SHOW_GREETING / HIDE_GREETING to test the accounts screen.',
             ];
@@ -728,9 +750,19 @@
             }
 
             function updateChatConfigDisplay() {
-                var text = formatChatConfig(chatConfig);
-                chatConfigText.value = text;
-                chatConfigPanel.classList.add('visible');
+                chatConfigText.value = formatChatConfig(chatConfig);
+            }
+
+            function setDevToolsOpen(open) {
+                devToolsOpen = open;
+                devToolsPanel.classList.toggle('visible', open);
+                devToolsPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+                devToolsBtn.classList.toggle('active', open);
+                devToolsBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+            }
+
+            function toggleDevTools() {
+                setDevToolsOpen(!devToolsOpen);
             }
 
             function logChatConfig() {
@@ -1233,6 +1265,7 @@
                 runDemo(chip.getAttribute('data-demo'));
             });
 
+            devToolsBtn.addEventListener('click', toggleDevTools);
             clearChatBtn.addEventListener('click', clearChat);
             closeChatBtn.addEventListener('click', closeChat);
             logConfigBtn.addEventListener('click', logChatConfig);
