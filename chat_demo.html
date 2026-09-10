@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Chat Demo</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-elevated: #334155;
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-soft: rgba(59, 130, 246, 0.15);
+            --user-bubble: #2563eb;
+            --bot-bubble: #1e293b;
+            --system-bubble: rgba(15, 23, 42, 0.85);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --status-bar-fallback: 28px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 100dvh;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: calc(12px + max(var(--safe-top), var(--status-bar-fallback))) 12px 12px 16px;
+            background: linear-gradient(180deg, #1e3a5f 0%, var(--bg) 100%);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #60a5fa, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .header-text { flex: 1; min-width: 0; }
+
+        .header-text h1 {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .header-text p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .icon-btn:active { background: var(--surface-elevated); }
+
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            margin-top: 10px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--warning);
+        }
+
+        .status-dot.connected { background: var(--success); }
+        .status-dot.error { background: var(--error); }
+
+        .actions-bar {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .action-chip {
+            width: 100%;
+            min-width: 0;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 11px;
+            line-height: 1.3;
+            padding: 8px 6px;
+            border-radius: 12px;
+            cursor: pointer;
+            white-space: normal;
+            word-break: break-word;
+            text-align: center;
+        }
+
+        .action-chip:active { background: var(--surface-elevated); }
+
+        .chat-config-panel {
+            flex-shrink: 0;
+            margin: 0 12px 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.65);
+            display: none;
+        }
+
+        .chat-config-panel.visible {
+            display: block;
+        }
+
+        .chat-config-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .chat-config-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .chat-config-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .config-btn {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 11px;
+            line-height: 1;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .config-btn:active { background: var(--surface-elevated); }
+
+        .chat-config-text {
+            width: 100%;
+            min-height: 72px;
+            max-height: 140px;
+            margin: 0;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: #cbd5e1;
+            font-size: 11px;
+            line-height: 1.4;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            resize: vertical;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .chat-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
+        }
+
+        .message {
+            max-width: 85%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            animation: fadeIn 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user { align-self: flex-end; align-items: flex-end; }
+        .message.bot { align-self: flex-start; align-items: flex-start; }
+        .message.system { align-self: center; align-items: center; max-width: 100%; }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .message.user .bubble {
+            background: var(--user-bubble);
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.bot .bubble {
+            background: var(--bot-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message.system .bubble {
+            background: var(--system-bubble);
+            border: 1px dashed var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            max-width: 100%;
+            white-space: pre-wrap;
+        }
+
+        .message-divider {
+            align-self: stretch;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 2px 0;
+            flex-shrink: 0;
+        }
+
+        .meta {
+            font-size: 10px;
+            color: var(--text-muted);
+            padding: 0 4px;
+        }
+
+        .typing-wrap {
+            flex-shrink: 0;
+            padding: 0 16px 8px;
+        }
+
+        .typing {
+            display: none;
+            width: fit-content;
+            padding: 10px 14px;
+            background: var(--bot-bubble);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            gap: 4px;
+        }
+
+        .typing.visible { display: flex; }
+
+        .typing span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.15s; }
+        .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+
+        .composer {
+            padding: 12px 16px calc(12px + var(--safe-bottom));
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .composer-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .composer-input {
+            flex: 1;
+            min-height: 42px;
+            max-height: 120px;
+            resize: none;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--bg);
+            color: var(--text);
+            padding: 10px 14px;
+            font-size: 14px;
+            line-height: 1.4;
+            font-family: inherit;
+        }
+
+        .composer-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .send-btn svg { width: 18px; height: 18px; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-row">
+                <div class="avatar">✦</div>
+                <div class="header-text">
+                    <h1>Banking Assistant</h1>
+                    <p>Bridge demo · request · event</p>
+                </div>
+                <div class="header-toolbar">
+                    <button class="icon-btn" type="button" id="clear-chat-btn" aria-label="Clear chat" title="Clear chat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M19 6l-1 14H6L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" type="button" id="close-chat-btn" aria-label="Close chat" title="Close chat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="status-pill" id="bridge-status">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-label">Connecting</span>
+            </div>
+        </header>
+
+        <div class="actions-bar" id="actions-bar">
+            <button class="action-chip" type="button" data-demo="chat-ready">CHAT_READY</button>
+            <button class="action-chip" type="button" data-demo="open-url-in-app">OPEN_URL (IN APP)</button>
+            <button class="action-chip" type="button" data-demo="open-url-external">OPEN_URL (EXTERNAL)</button>
+            <button class="action-chip" type="button" data-demo="intent-route-transfers">INTENT_TRANSFERS</button>
+            <button class="action-chip" type="button" data-demo="intent-route-transaction-history">INTENT_TXN_HISTORY</button>
+            <button class="action-chip" type="button" data-demo="show-greeting">SHOW_GREETING</button>
+            <button class="action-chip" type="button" data-demo="hide-greeting">HIDE_GREETING</button>
+            <button class="action-chip" type="button" data-demo="log-chat-config">LOG_CONFIG</button>
+        </div>
+
+        <section class="chat-config-panel" id="chat-config-panel" aria-live="polite">
+            <div class="chat-config-header">
+                <div class="chat-config-title">Chat config</div>
+                <div class="chat-config-actions">
+                    <button class="config-btn" type="button" id="log-config-btn">Log</button>
+                    <button class="config-btn" type="button" id="copy-config-btn">Copy</button>
+                </div>
+            </div>
+            <textarea class="chat-config-text" id="chat-config-text" readonly spellcheck="false" aria-label="Chat config JSON">{}</textarea>
+        </section>
+
+        <div class="chat-body">
+            <div class="messages" id="messages">
+                <div class="message bot">
+                    <div class="bubble">Hi! I'm your banking assistant demo. Send a message or tap an action chip above to try the native bridge.</div>
+                    <span class="meta" id="welcome-meta"></span>
+                </div>
+            </div>
+            <div class="typing-wrap">
+                <div class="typing" id="typing">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+
+        <form class="composer" id="composer-form">
+            <div class="composer-row">
+                <textarea class="composer-input" id="message-input" rows="1" placeholder="Ask me anything…" autocomplete="off"></textarea>
+                <button class="send-btn" id="send-btn" type="submit" disabled aria-label="Send">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 2 11 13"></path>
+                        <path d="M22 2 15 22 11 13 2 9 22 2"></path>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function() {
+            var VERSION = '1.0';
+            var bridge = null;
+            var bridgeReady = false;
+            var chatConfig = null;
+            var TRANSFER_INTERNAL_INTENT_ID = 'transferInternal';
+            var TRANSACTION_HISTORY_INTENT_ID = 'transactionHistory';
+
+            var messagesEl = document.getElementById('messages');
+            var typingEl = document.getElementById('typing');
+            var inputEl = document.getElementById('message-input');
+            var sendBtn = document.getElementById('send-btn');
+            var statusDot = document.getElementById('status-dot');
+            var statusLabel = document.getElementById('status-label');
+            var composerForm = document.getElementById('composer-form');
+            var actionsBar = document.getElementById('actions-bar');
+            var clearChatBtn = document.getElementById('clear-chat-btn');
+            var closeChatBtn = document.getElementById('close-chat-btn');
+            var welcomeMeta = document.getElementById('welcome-meta');
+            var chatConfigPanel = document.getElementById('chat-config-panel');
+            var chatConfigText = document.getElementById('chat-config-text');
+            var logConfigBtn = document.getElementById('log-config-btn');
+            var copyConfigBtn = document.getElementById('copy-config-btn');
+
+            var botReplies = [
+                'I can help with transfers, balances, and account questions.',
+                'Try the action chips above to test native bridge requests and events.',
+                'OPEN_URL supports in-app and external browser modes.',
+                'Use SHOW_GREETING / HIDE_GREETING to test the accounts screen.',
+            ];
+            var replyIndex = 0;
+
+            welcomeMeta.textContent = formatMeta('Assistant');
+
+            function uuid() {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0;
+                    var v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            function formatTime(date) {
+                return new Date(date || Date.now()).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function formatMeta(label) {
+                return (label ? label + ' · ' : '') + formatTime();
+            }
+
+            function buildMessage(type, action, payload, target) {
+                return {
+                    version: VERSION,
+                    id: uuid(),
+                    source: 'web',
+                    target: target || 'native',
+                    timestamp: Date.now(),
+                    type: type,
+                    action: action,
+                    payload: payload || {}
+                };
+            }
+
+            function setBridgeStatus(state, label) {
+                statusDot.className = 'status-dot ' + state;
+                statusLabel.textContent = label;
+            }
+
+            function formatChatConfig(config) {
+                try {
+                    return JSON.stringify(config || {}, null, 2);
+                } catch (error) {
+                    return String(config);
+                }
+            }
+
+            function updateChatConfigDisplay() {
+                var text = formatChatConfig(chatConfig);
+                chatConfigText.value = text;
+                chatConfigPanel.classList.add('visible');
+            }
+
+            function logChatConfig() {
+                if (!chatConfig) {
+                    addSystemLog('No chat config received yet.', false);
+                    addMessage('bot', 'Chat config is not available yet.', 'Chat config');
+                    return;
+                }
+                addSystemLog('chat config\n' + formatChatConfig(chatConfig), false);
+                addMessage('bot', 'Chat config logged above.', 'Chat config');
+            }
+
+            function copyChatConfig() {
+                var text = chatConfigText.value || '{}';
+                chatConfigText.focus();
+                chatConfigText.select();
+                chatConfigText.setSelectionRange(0, text.length);
+
+                function onCopied() {
+                    addMessage('bot', 'Chat config copied to clipboard.', 'Chat config');
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(onCopied).catch(function() {
+                        try {
+                            if (document.execCommand('copy')) {
+                                onCopied();
+                            } else {
+                                addMessage('bot', 'Select the config text above to copy manually.', 'Chat config');
+                            }
+                        } catch (error) {
+                            addMessage('bot', 'Select the config text above to copy manually.', 'Chat config');
+                        }
+                    });
+                    return;
+                }
+
+                try {
+                    if (document.execCommand('copy')) {
+                        onCopied();
+                    } else {
+                        addMessage('bot', 'Select the config text above to copy manually.', 'Chat config');
+                    }
+                } catch (error) {
+                    addMessage('bot', 'Select the config text above to copy manually.', 'Chat config');
+                }
+            }
+
+            function scrollToBottom() {
+                requestAnimationFrame(function() {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                });
+            }
+
+            function addEventDivider() {
+                var divider = document.createElement('div');
+                divider.className = 'message-divider';
+                divider.textContent = '----------';
+                messagesEl.appendChild(divider);
+                scrollToBottom();
+            }
+
+            function addMessage(kind, text, metaLabel) {
+                var wrapper = document.createElement('div');
+                wrapper.className = 'message ' + kind;
+
+                var bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.textContent = text;
+
+                var metaEl = document.createElement('span');
+                metaEl.className = 'meta';
+                metaEl.textContent = formatMeta(metaLabel || '');
+
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(metaEl);
+                messagesEl.appendChild(wrapper);
+                scrollToBottom();
+                return wrapper;
+            }
+
+            function addInboundNativeContent(kind, text, metaLabel) {
+                addMessage(kind, text, metaLabel);
+                addEventDivider();
+            }
+
+            function addSystemLog(text, isInbound) {
+                addMessage('system', text, 'Bridge');
+                if (isInbound) {
+                    addEventDivider();
+                }
+            }
+
+            function clearChat() {
+                messagesEl.innerHTML = '';
+                addMessage('bot', 'Chat cleared.', 'Assistant');
+            }
+
+            function closeChat() {
+                if (!bridge) return;
+                sendEvent('CHAT_CLOSE', {});
+            }
+
+            function showTyping(show) {
+                typingEl.classList.toggle('visible', show);
+                scrollToBottom();
+            }
+
+            function simulateBotReply(userText) {
+                showTyping(true);
+                setTimeout(function() {
+                    showTyping(false);
+                    var reply = botReplies[replyIndex % botReplies.length];
+                    replyIndex += 1;
+                    addMessage('bot', reply, 'Assistant');
+                }, 700 + Math.random() * 500);
+            }
+
+            function waitForBridge(callback) {
+                if (window.NativeBridge && window.NativeBridge.__initialized) {
+                    callback(window.NativeBridge);
+                    return;
+                }
+                setTimeout(function() { waitForBridge(callback); }, 50);
+            }
+
+            function sendEvent(action, payload) {
+                if (!bridge) return;
+                var msg = buildMessage('event', action, payload);
+                bridge.postMessage(JSON.stringify(msg));
+                addSystemLog('event → ' + action + '\n' + JSON.stringify(msg, null, 2), false);
+            }
+
+            async function sendRequest(action, payload, options) {
+                if (!bridge) return;
+                addSystemLog('request → ' + action + ' …', false);
+                try {
+                    var result = await bridge.request(action, payload || {}, options);
+                    addSystemLog('response ✓ ' + action + '\n' + JSON.stringify(result, null, 2), false);
+                    addMessage('bot', action + ' succeeded.', 'Native response');
+                } catch (error) {
+                    addSystemLog('response ✗ ' + action + '\n' + (error && error.message ? error.message : String(error)), false);
+                    addMessage('bot', action + ' failed: ' + (error && error.message ? error.message : 'Unknown error'), 'Native response');
+                }
+            }
+
+            function initBridgeHandlers() {
+                bridge.onEvent('BRIDGE_READY', function() {
+                    setBridgeStatus('connected', 'Bridge ready');
+                });
+
+                bridge.onEvent('SESSION_CONTEXT', function(payload) {
+                    chatConfig = payload || {};
+                    updateChatConfigDisplay();
+                    addSystemLog('event ← SESSION_CONTEXT\n' + formatChatConfig(chatConfig), false);
+                    var label = payload.authenticated
+                        ? 'Session loaded' + (payload.userId ? ' for ' + payload.userId : '') + '.'
+                        : 'No active session.';
+                    addInboundNativeContent('bot', label, 'SESSION_CONTEXT');
+                });
+
+                bridge.onEvent('ASK_QUESTION', function(payload) {
+                    if (!payload || typeof payload.question !== 'string' || !payload.question.length) {
+                        return;
+                    }
+                    addSystemLog(
+                        'event ← ASK_QUESTION\n' + JSON.stringify(payload, null, 2),
+                        false
+                    );
+                    addMessage('user', payload.question, 'You');
+                    if (payload.prevQuestion && payload.prevQuestion.question) {
+                        addInboundNativeContent(
+                            'bot',
+                            'Prior question: ' + payload.prevQuestion.question,
+                            'ASK_QUESTION (prevQuestion)'
+                        );
+                    }
+                });
+
+                bridge.onEvent('CHAT_VISIBILITY', function(payload) {
+                    addSystemLog('event ← CHAT_VISIBILITY\n' + JSON.stringify(payload, null, 2), false);
+                    addInboundNativeContent(
+                        'bot',
+                        'Chat is now ' + (payload.visible ? 'visible' : 'hidden') + ' (native).',
+                        'CHAT_VISIBILITY'
+                    );
+                });
+
+                bridge.onEvent('APP_LIFECYCLE', function(payload) {
+                    addSystemLog('event ← APP_LIFECYCLE\n' + JSON.stringify(payload, null, 2), false);
+                    addInboundNativeContent('bot', 'App moved to ' + payload.state + '.', 'APP_LIFECYCLE');
+                });
+
+                setBridgeStatus('connected', 'Connected');
+                bridgeReady = true;
+                sendBtn.disabled = false;
+
+                sendEvent('CHAT_READY', {});
+            }
+
+            function sendIntentRoute(intentId, options) {
+                options = options || {};
+                addSystemLog(
+                    'INTENT_ROUTE payload\n' + JSON.stringify({
+                        intentId: intentId,
+                        fromAccountId: options.fromAccountId || '',
+                        toAccountId: options.toAccountId || '',
+                        transferAmount: options.transferAmount || '',
+                        closeChatOnNavigate: options.closeChatOnNavigate !== false
+                    }, null, 2),
+                    false
+                );
+                sendRequest('INTENT_ROUTE', {
+                    intentId: intentId,
+                    fromAccountId: options.fromAccountId || '',
+                    toAccountId: options.toAccountId || '',
+                    transferAmount: options.transferAmount || '',
+                    closeChatOnNavigate: options.closeChatOnNavigate !== false
+                });
+            }
+
+            function sendOpenUrl(mode) {
+                sendRequest('OPEN_URL', {
+                    url: 'https://www.example.com/help/article/123',
+                    mode: mode,
+                    requiresAuth: false
+                });
+            }
+
+            function runDemo(demo) {
+                if (!bridgeReady) {
+                    addSystemLog('Bridge not ready yet.', false);
+                    return;
+                }
+
+                switch (demo) {
+                    case 'chat-ready':
+                        sendEvent('CHAT_READY', {});
+                        break;
+                    case 'open-url-in-app':
+                        sendOpenUrl('in_app_browser');
+                        break;
+                    case 'open-url-external':
+                        sendOpenUrl('external_browser');
+                        break;
+                    case 'intent-route-transfers':
+                        sendIntentRoute(TRANSFER_INTERNAL_INTENT_ID);
+                        break;
+                    case 'intent-route-transaction-history':
+                        sendIntentRoute(TRANSACTION_HISTORY_INTENT_ID, { closeChatOnNavigate: true });
+                        break;
+                    case 'show-greeting':
+                        sendRequest('SCREEN_EVENT', {
+                            screenId: 'accounts',
+                            eventName: 'SHOW_GREETING',
+                            closeChatOnNavigate: true,
+                            data: {
+                                title: 'Good morning',
+                                message: 'Your accounts are looking healthy today.'
+                            }
+                        });
+                        break;
+                    case 'hide-greeting':
+                        sendRequest('SCREEN_EVENT', {
+                            screenId: 'accounts',
+                            eventName: 'HIDE_GREETING',
+                            closeChatOnNavigate: true
+                        });
+                        break;
+                    case 'log-chat-config':
+                        logChatConfig();
+                        break;
+                }
+            }
+
+            composerForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                var text = inputEl.value.trim();
+                if (!text || !bridgeReady) return;
+
+                addMessage('user', text, 'You');
+                inputEl.value = '';
+                inputEl.style.height = 'auto';
+                simulateBotReply(text);
+
+                if (text.toLowerCase().indexOf('open url') >= 0 && text.toLowerCase().indexOf('external') >= 0) {
+                    sendOpenUrl('external_browser');
+                } else if (text.toLowerCase().indexOf('open url') >= 0) {
+                    sendOpenUrl('in_app_browser');
+                } else if (text.toLowerCase().indexOf('hide greeting') >= 0) {
+                    sendRequest('SCREEN_EVENT', {
+                        screenId: 'accounts',
+                        eventName: 'HIDE_GREETING',
+                        closeChatOnNavigate: true
+                    });
+                } else if (text.toLowerCase().indexOf('greeting') >= 0) {
+                    sendRequest('SCREEN_EVENT', {
+                        screenId: 'accounts',
+                        eventName: 'SHOW_GREETING',
+                        closeChatOnNavigate: true,
+                        data: {
+                            title: 'Good morning',
+                            message: 'Your accounts are looking healthy today.'
+                        }
+                    });
+                } else if (text.toLowerCase().indexOf('history') >= 0 || text.toLowerCase().indexOf('transaction') >= 0) {
+                    sendIntentRoute(TRANSACTION_HISTORY_INTENT_ID, { closeChatOnNavigate: true });
+                } else if (text.toLowerCase().indexOf('transfer') >= 0) {
+                    sendIntentRoute(TRANSFER_INTERNAL_INTENT_ID);
+                }
+            });
+
+            inputEl.addEventListener('input', function() {
+                inputEl.style.height = 'auto';
+                inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+            });
+
+            actionsBar.addEventListener('click', function(event) {
+                var chip = event.target.closest('[data-demo]');
+                if (!chip) return;
+                runDemo(chip.getAttribute('data-demo'));
+            });
+
+            clearChatBtn.addEventListener('click', clearChat);
+            closeChatBtn.addEventListener('click', closeChat);
+            logConfigBtn.addEventListener('click', logChatConfig);
+            copyConfigBtn.addEventListener('click', copyChatConfig);
+
+            waitForBridge(function(nativeBridge) {
+                bridge = nativeBridge;
+                initBridgeHandlers();
+            });
+        })();
+    </script>
+</body>
+</html>
