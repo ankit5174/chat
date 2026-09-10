@@ -400,6 +400,166 @@
         }
 
         .send-btn svg { width: 18px; height: 18px; }
+
+        .bubble.rich {
+            padding: 0;
+            overflow: hidden;
+            min-width: min(100%, 300px);
+        }
+
+        .insight-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            overflow: hidden;
+        }
+
+        .insight-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px 10px;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.22), rgba(99, 102, 241, 0.08));
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .insight-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #60a5fa, #4f46e5);
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+        }
+
+        .insight-header-text h3 {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .insight-header-text p {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .insight-summary {
+            padding: 14px 16px 12px;
+            font-size: 14px;
+            line-height: 1.55;
+            color: #e2e8f0;
+        }
+
+        .insight-chart-wrap {
+            padding: 4px 16px 14px;
+        }
+
+        .insight-chart-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .insight-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px 12px;
+            align-items: center;
+        }
+
+        .chart-row-labels {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            grid-column: 1 / -1;
+        }
+
+        .chart-category {
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chart-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #f8fafc;
+            flex-shrink: 0;
+        }
+
+        .chart-track {
+            grid-column: 1 / -1;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.12);
+            overflow: hidden;
+        }
+
+        .chart-fill {
+            height: 100%;
+            border-radius: 999px;
+            width: 0;
+            transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+        }
+
+        .insight-footnote {
+            padding: 0 16px 14px;
+            font-size: 11px;
+            line-height: 1.45;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            margin-top: 4px;
+            padding-top: 10px;
+        }
+
+        .insight-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            padding: 0 16px 14px;
+        }
+
+        .stat-pill {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 12px;
+            padding: 8px 10px;
+        }
+
+        .stat-pill span {
+            display: block;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-pill strong {
+            display: block;
+            margin-top: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
     </style>
 </head>
 <body>
@@ -633,13 +793,47 @@
                 scrollToBottom();
             }
 
+            var CHART_COLORS = ['#1A6CDA', '#EC6300', '#009E9B', '#D02670', '#7C1FCB', '#C08C07'];
+
+            function delay(ms) {
+                return new Promise(function(resolve) {
+                    setTimeout(resolve, ms);
+                });
+            }
+
+            function formatCurrency(value) {
+                var amount = Number(value);
+                if (!isFinite(amount)) {
+                    return String(value);
+                }
+                return '$' + amount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function formatAxisValue(value, axisFormat) {
+                if (axisFormat === 'CURRENCY') {
+                    return formatCurrency(value);
+                }
+                return String(value);
+            }
+
             function addMessage(kind, text, metaLabel) {
+                return addRichMessage(kind, text, metaLabel, false);
+            }
+
+            function addRichMessage(kind, content, metaLabel, richBubble) {
                 var wrapper = document.createElement('div');
                 wrapper.className = 'message ' + kind;
 
                 var bubble = document.createElement('div');
-                bubble.className = 'bubble';
-                bubble.textContent = text;
+                bubble.className = 'bubble' + (richBubble ? ' rich' : '');
+                if (typeof content === 'string') {
+                    bubble.textContent = content;
+                } else if (content) {
+                    bubble.appendChild(content);
+                }
 
                 var metaEl = document.createElement('span');
                 metaEl.className = 'meta';
@@ -650,6 +844,153 @@
                 messagesEl.appendChild(wrapper);
                 scrollToBottom();
                 return wrapper;
+            }
+
+            function buildInsightCard(response) {
+                var card = document.createElement('div');
+                card.className = 'insight-card';
+
+                var header = document.createElement('div');
+                header.className = 'insight-card-header';
+                header.innerHTML =
+                    '<div class="insight-icon">✦</div>' +
+                    '<div class="insight-header-text">' +
+                    '<h3>Transaction insights</h3>' +
+                    '<p>Based on your search</p>' +
+                    '</div>';
+                card.appendChild(header);
+
+                if (response.summary) {
+                    var summary = document.createElement('div');
+                    summary.className = 'insight-summary';
+                    summary.textContent = response.summary;
+                    card.appendChild(summary);
+                }
+
+                var viz = response.visualization;
+                if (viz && viz.series && viz.series.length && viz.xAxis && viz.xAxis.dataPoints) {
+                    var labels = viz.xAxis.dataPoints.map(String);
+                    var values = (viz.series[0].dataPoints || []).map(function(v) { return Number(v); });
+                    var rowCount = Math.min(labels.length, values.length);
+                    var valueFormat = (viz.yAxis && viz.yAxis.format) || 'COUNT';
+                    var maxValue = Math.max.apply(null, values.slice(0, rowCount).concat([1]));
+
+                    var chartWrap = document.createElement('div');
+                    chartWrap.className = 'insight-chart-wrap';
+
+                    var chartTitle = document.createElement('div');
+                    chartTitle.className = 'insight-chart-title';
+                    chartTitle.textContent = (viz.xAxis.label || 'Breakdown') + ' overview';
+                    chartWrap.appendChild(chartTitle);
+
+                    var chart = document.createElement('div');
+                    chart.className = 'insight-chart';
+
+                    for (var i = 0; i < rowCount; i++) {
+                        var row = document.createElement('div');
+                        row.className = 'chart-row';
+
+                        var labelRow = document.createElement('div');
+                        labelRow.className = 'chart-row-labels';
+
+                        var category = document.createElement('span');
+                        category.className = 'chart-category';
+                        category.textContent = labels[i];
+
+                        var value = document.createElement('span');
+                        value.className = 'chart-value';
+                        value.textContent = formatAxisValue(values[i], valueFormat);
+
+                        labelRow.appendChild(category);
+                        labelRow.appendChild(value);
+
+                        var track = document.createElement('div');
+                        track.className = 'chart-track';
+
+                        var fill = document.createElement('div');
+                        fill.className = 'chart-fill';
+                        fill.style.background = 'linear-gradient(90deg, ' +
+                            CHART_COLORS[i % CHART_COLORS.length] + ', ' +
+                            CHART_COLORS[(i + 1) % CHART_COLORS.length] + ')';
+                        var targetWidth = ((values[i] / maxValue) * 100) + '%';
+                        fill.style.width = '0%';
+
+                        track.appendChild(fill);
+                        row.appendChild(labelRow);
+                        row.appendChild(track);
+                        chart.appendChild(row);
+
+                        (function(bar, width) {
+                            requestAnimationFrame(function() {
+                                bar.style.width = width;
+                            });
+                        })(fill, targetWidth);
+                    }
+
+                    chartWrap.appendChild(chart);
+                    card.appendChild(chartWrap);
+                }
+
+                if (response.rowCount != null || response.executionTimeMs != null) {
+                    var stats = document.createElement('div');
+                    stats.className = 'insight-stats';
+
+                    if (response.rowCount != null) {
+                        var rowsStat = document.createElement('div');
+                        rowsStat.className = 'stat-pill';
+                        rowsStat.innerHTML = '<span>Transactions</span><strong>' + response.rowCount + '</strong>';
+                        stats.appendChild(rowsStat);
+                    }
+
+                    if (response.executionTimeMs != null) {
+                        var timeStat = document.createElement('div');
+                        timeStat.className = 'stat-pill';
+                        timeStat.innerHTML = '<span>Response time</span><strong>' + response.executionTimeMs + ' ms</strong>';
+                        stats.appendChild(timeStat);
+                    }
+
+                    card.appendChild(stats);
+                }
+
+                if (response.footnote) {
+                    var footnote = document.createElement('div');
+                    footnote.className = 'insight-footnote';
+                    footnote.textContent = response.footnote;
+                    card.appendChild(footnote);
+                }
+
+                return card;
+            }
+
+            function addNlsInsightMessage(response) {
+                var card = buildInsightCard(response || {});
+                addRichMessage('bot', card, 'Assistant', true);
+            }
+
+            async function handleAskQuestion(payload) {
+                var prevQuestion = payload && payload.prevQuestion;
+                var currentQuestion = payload && typeof payload.question === 'string'
+                    ? payload.question.trim()
+                    : '';
+
+                if (prevQuestion && prevQuestion.question) {
+                    addMessage('user', prevQuestion.question, 'You');
+                    await delay(350);
+                    showTyping(true);
+                    await delay(900);
+                    showTyping(false);
+
+                    if (prevQuestion.response) {
+                        addNlsInsightMessage(prevQuestion.response);
+                    } else {
+                        addMessage('bot', 'I found context from your previous search.', 'Assistant');
+                    }
+                }
+
+                if (currentQuestion) {
+                    await delay(prevQuestion && prevQuestion.question ? 400 : 0);
+                    addMessage('user', currentQuestion, 'You');
+                }
             }
 
             function addInboundNativeContent(kind, text, metaLabel) {
@@ -733,21 +1074,19 @@
                 });
 
                 bridge.onEvent('ASK_QUESTION', function(payload) {
-                    if (!payload || typeof payload.question !== 'string' || !payload.question.length) {
+                    if (!payload) {
+                        return;
+                    }
+                    var hasPrev = payload.prevQuestion && payload.prevQuestion.question;
+                    var hasCurrent = typeof payload.question === 'string' && payload.question.trim().length > 0;
+                    if (!hasPrev && !hasCurrent) {
                         return;
                     }
                     addSystemLog(
                         'event ← ASK_QUESTION\n' + JSON.stringify(payload, null, 2),
                         false
                     );
-                    addMessage('user', payload.question, 'You');
-                    if (payload.prevQuestion && payload.prevQuestion.question) {
-                        addInboundNativeContent(
-                            'bot',
-                            'Prior question: ' + payload.prevQuestion.question,
-                            'ASK_QUESTION (prevQuestion)'
-                        );
-                    }
+                    handleAskQuestion(payload);
                 });
 
                 bridge.onEvent('CHAT_VISIBILITY', function(payload) {
