@@ -615,8 +615,9 @@
         <div class="dev-tools-panel" id="dev-tools-panel" aria-hidden="true">
             <div class="actions-bar" id="actions-bar">
                 <button class="action-chip" type="button" data-demo="chat-ready">CHAT_READY</button>
-                <button class="action-chip" type="button" data-demo="open-url-in-app">OPEN_URL (IN APP)</button>
-                <button class="action-chip" type="button" data-demo="open-url-external">OPEN_URL (EXTERNAL)</button>
+                <button class="action-chip" type="button" data-demo="open-url-in-app" title="https URL, in_app_browser">OPEN_URL HTTPS (IN APP)</button>
+                <button class="action-chip" type="button" data-demo="open-url-external" title="https URL, external_browser">OPEN_URL HTTPS (EXT)</button>
+                <button class="action-chip" type="button" data-demo="open-url-deeplink" title="cma0{fiId}://… — mode ignored; uses DeepLinkLauncher">OPEN_URL (DEEPLINK)</button>
                 <button class="action-chip" type="button" data-demo="intent-route-transfers">INTENT_TRANSFERS</button>
                 <button class="action-chip" type="button" data-demo="intent-route-transaction-history">INTENT_TXN_HISTORY</button>
                 <button class="action-chip" type="button" data-demo="show-greeting">SHOW_GREETING</button>
@@ -671,6 +672,9 @@
             var chatConfig = null;
             var TRANSFER_INTERNAL_INTENT_ID = 'transferInternal';
             var TRANSACTION_HISTORY_INTENT_ID = 'transactionHistory';
+            var DEMO_HTTPS_URL = 'https://www.example.com/help/article/123';
+            /** Match your APK scheme (build: cma0{fiFlavor}). Edit path to a feature id in nav config. */
+            var DEMO_DEEPLINK_URL = 'cma00519://sso/glia';
 
             var messagesEl = document.getElementById('messages');
             var typingEl = document.getElementById('typing');
@@ -694,7 +698,7 @@
             var botReplies = [
                 'I can help with transfers, balances, and account questions.',
                 'Open developer tools in the header to test native bridge quick actions.',
-                'OPEN_URL supports in-app and external browser modes.',
+                'OPEN_URL: https + mode (in-app / external), or cma0{fiId}:// deeplinks (native only).',
                 'Use SHOW_GREETING / HIDE_GREETING to test the accounts screen.',
             ];
             var replyIndex = 0;
@@ -1163,9 +1167,9 @@
                 });
             }
 
-            function sendOpenUrl(mode) {
+            function sendOpenUrl(url, mode) {
                 sendRequest('OPEN_URL', {
-                    url: 'https://www.example.com/help/article/123',
+                    url: url,
                     mode: mode,
                     requiresAuth: false
                 });
@@ -1182,10 +1186,17 @@
                         sendEvent('CHAT_READY', {});
                         break;
                     case 'open-url-in-app':
-                        sendOpenUrl('in_app_browser');
+                        sendOpenUrl(DEMO_HTTPS_URL, 'in_app_browser');
                         break;
                     case 'open-url-external':
-                        sendOpenUrl('external_browser');
+                        sendOpenUrl(DEMO_HTTPS_URL, 'external_browser');
+                        break;
+                    case 'open-url-deeplink':
+                        sendOpenUrl(DEMO_DEEPLINK_URL, 'in_app_browser');
+                        addSystemLog(
+                            'OPEN_URL deeplink → ' + DEMO_DEEPLINK_URL + '\n(mode ignored; native ACTION_VIEW → DeepLinkActivity)',
+                            false
+                        );
                         break;
                     case 'intent-route-transfers':
                         sendIntentRoute(TRANSFER_INTERNAL_INTENT_ID);
@@ -1227,10 +1238,12 @@
                 inputEl.style.height = 'auto';
                 simulateBotReply(text);
 
-                if (text.toLowerCase().indexOf('open url') >= 0 && text.toLowerCase().indexOf('external') >= 0) {
-                    sendOpenUrl('external_browser');
+                if (text.toLowerCase().indexOf('open url') >= 0 && text.toLowerCase().indexOf('deeplink') >= 0) {
+                    sendOpenUrl(DEMO_DEEPLINK_URL, 'in_app_browser');
+                } else if (text.toLowerCase().indexOf('open url') >= 0 && text.toLowerCase().indexOf('external') >= 0) {
+                    sendOpenUrl(DEMO_HTTPS_URL, 'external_browser');
                 } else if (text.toLowerCase().indexOf('open url') >= 0) {
-                    sendOpenUrl('in_app_browser');
+                    sendOpenUrl(DEMO_HTTPS_URL, 'in_app_browser');
                 } else if (text.toLowerCase().indexOf('hide greeting') >= 0) {
                     sendRequest('SCREEN_EVENT', {
                         screenId: 'accounts',
